@@ -1,0 +1,31 @@
+import { Column } from '../columns';
+import { ConnectionOptions, Identifier } from '../common';
+import { Database } from '../databases';
+import { Driver } from '../drivers';
+import { Query } from '../queries';
+import { Table } from '../tables';
+export declare class MySqlDriver implements Driver {
+    private readonly options;
+    private connection;
+    constructor(options: ConnectionOptions);
+    connect(): Promise<void>;
+    disconnect(): Promise<void>;
+    private query;
+    hasDatabase(name: Identifier): Promise<boolean>;
+    getDatabase(name: Identifier): Promise<Database>;
+    getDatabases(): Promise<Database[]>;
+    hasTable(databaseName: string, name: string): Promise<boolean>;
+    getTable(_: string, name: string): Promise<Table>;
+    getTables(databaseName: string): Promise<Table[]>;
+    hasColumn(databaseName: string, tableName: string, name: string): Promise<boolean>;
+    getColumn<T = any>(databaseName: string, tableName: string, name: string): Promise<Column<T>>;
+    getColumns<T = any>(databaseName: string, tableName: string): Promise<Array<Column<T>>>;
+    insert<T = {}>(databaseName: string, tableName: string, row: T): void;
+    insertMultiple<T = {}>(databaseName: string, tableName: string, rows: T[]): void;
+    select<T = {}, M = T>(databaseName: string, tableName: string, query: Query<T>): Array<M>;
+    stream<T = {}, M = T>(databaseName: string, tableName: string, query: Query<T>): AsyncIterator<M>;
+    update<T = {}>(databaseName: string, tableName: string, values: T, query: Query<T>): Promise<void>;
+    delete<T = {}>(databaseName: string, tableName: string, query: Query<T>): Promise<void>;
+    escape(value: any): string;
+    escapeIdentifier(identifier: string): string;
+}

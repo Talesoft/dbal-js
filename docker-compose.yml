@@ -1,0 +1,14 @@
+version: '3.2'
+
+services:
+    # The Database.
+    # This is the main application database
+    mysql_5.7:
+        image: mysql:5.7
+        volumes:
+            - db-data:/var/lib/mysql
+        env_file: [./.env.docker.mysql]
+        ports: ['3306:3306']
+
+volumes:
+    db-data:

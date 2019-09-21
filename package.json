@@ -1,0 +1,58 @@
+{
+    "name": "@talesoft/bem",
+    "description": "A BEM helper function",
+    "keywords": [
+        "bem",
+        "css"
+    ],
+    "version": "0.1.0",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "homepage": "https://github.com/Talesoft/bem",
+    "license": "MIT",
+    "readme": "https://github.com/Talesoft/bem/blob/master/README.md",
+    "repository": {
+        "url": "https://github.com/Talesoft/bem",
+        "type": "git"
+    },
+    "author": {
+        "name": "Torben Köhn",
+        "email": "t.koehn@outlook.com",
+        "url": "https://talesoft.codes"
+    },
+    "contributors": [],
+    "bugs": {
+        "url": "https://github.com/Talesoft/bem/issues",
+        "email": "t.koehn@outlook.com"
+    },
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc --watch",
+        "test": "jest",
+        "test:coverage": "jest --coverage",
+        "lint": "tslint 'src/**/*.ts'",
+        "lint:fix": "tslint 'src/**/*.ts' --fix"
+    },
+    "dependencies": {
+        "@types/esprima": "^4.0.2",
+        "esprima": "^4.0.1",
+        "estree-walker": "^0.8.1",
+        "to-ast": "^1.0.0",
+        "url-parse": "^1.4.7"
+    },
+    "peerDependencies": {
+        "mysql": "^2.17.1"
+    },
+    "devDependencies": {
+        "@types/mysql": "^2.15.7",
+        "@types/url-parse": "^1.4.3",
+        "@types/jest": "^24.0.18",
+        "@types/jest-each": "^0.3.4",
+        "jest": "^24.9.0",
+        "jest-each": "^24.9.0",
+        "ts-jest": "^24.1.0",
+        "tslint": "^5.20.0",
+        "tslint-config-airbnb": "^5.11.2",
+        "typescript": "^3.6.3"
+    }
+}
