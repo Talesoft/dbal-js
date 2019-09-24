@@ -9,6 +9,7 @@ __export(require("./connections"));
 __export(require("./databases"));
 __export(require("./keys"));
 __export(require("./queries"));
+__export(require("./schema"));
 __export(require("./tables"));
 __export(require("./types"));
 __export(require("./drivers/mysql"));

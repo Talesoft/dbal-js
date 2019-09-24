@@ -2,10 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 function parseTypeArgumentString(value) {
     let str = value;
-    const pattern = /^"[^"]+"|[\d.]+(?:\s*,\s*|$)/;
-    let matches;
+    const pattern = /^"([^"]+"|[\d.]+)(?:\s*,\s*|$)/;
     const args = [];
-    while (str.length > 0 && (matches = str.match(pattern))) {
+    while (str.length > 0) {
+        const matches = str.match(pattern);
+        if (!matches) {
+            break;
+        }
         const [match, argValue] = matches;
         let finalArgValue = argValue;
         if (!argValue.startsWith('"')) {
@@ -23,11 +26,14 @@ exports.parseTypeArgumentString = parseTypeArgumentString;
 function parseTypeInstructionString(value) {
     let str = value;
     const pattern = /^([\w\d_]+)(?:\(([^)]+)\))?(?: |$)/;
-    let matches;
     const instructions = [];
-    while (str.length > 0 && (matches = str.match(pattern))) {
+    while (str.length > 0) {
+        const matches = str.match(pattern);
+        if (!matches) {
+            break;
+        }
         const [match, keyword, args] = matches;
-        instructions.push({ keyword: keyword.toUpperCase(), args: parseTypeArgumentString(args) });
+        instructions.push({ keyword: keyword.toUpperCase(), args: args ? parseTypeArgumentString(args) : [] });
         str = str.substr(match.length);
     }
     return instructions;
@@ -47,7 +53,7 @@ function parseTypeInfoString(value) {
     return {
         nullable,
         type: instructions[0].keyword,
-        args: instructions[0].args,
+        typeParams: instructions[0].args,
         unsigned: !!instructions.find(i => i.keyword === 'UNSIGNED'),
     };
 }

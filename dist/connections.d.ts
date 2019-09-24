@@ -9,6 +9,7 @@ export declare class Connection {
     constructor(options: ConnectionOptions, driver: Driver);
     load(deep?: boolean): Promise<void>;
     hydrate(databases: Database[], deep?: boolean): Promise<void>;
+    save(deep?: boolean): Promise<void>;
     getDatabase(name?: Identifier): DatabaseView;
     disconnect(): Promise<void>;
     getData(deep?: boolean): {

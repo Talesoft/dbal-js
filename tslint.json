@@ -23,7 +23,10 @@
             "function-regex": "^\\*?\\[?[a-zA-Z][\\w\\d\\.]*\\]?$"
         }],
         "variable-name": [true, "ban-keywords", "check-format", "allow-pascal-case"],
-        "member-ordering": [true, {"order": "instance-sandwich"}]
+        "member-ordering": [true, {"order": "instance-sandwich"}],
+        "prefer-for-of": false,
+        "max-classes-per-file": false,
+        "align": false
     },
     "rulesDirectory": []
 }

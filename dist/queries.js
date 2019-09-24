@@ -10,7 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const esprima_1 = require("esprima");
-const estree_walker_1 = require("estree-walker");
 const functionParseCache = {};
 function parseFunctionExpression(fn) {
     const source = fn.toString();
@@ -19,7 +18,7 @@ function parseFunctionExpression(fn) {
     }
     let result;
     try {
-        const expr = esprima_1.parseScript('x = ' + source).body[0];
+        const expr = esprima_1.parseScript(`x = ${source}`).body[0];
         result = expr.expression.right;
     }
     catch (e) {
@@ -31,26 +30,6 @@ function parseFunctionExpression(fn) {
     return functionParseCache[source] = result;
 }
 exports.parseFunctionExpression = parseFunctionExpression;
-function renameParam(ast, index, newName) {
-    const param = ast.params[index];
-    if (param.type !== 'Identifier') {
-        throw new Error(`Failed to rename param at index ${index}: Param is not an identifier. Other params are not supported yet.`);
-    }
-    estree_walker_1.walk(ast, {
-        enter(node) {
-            if (node.type === 'Identifier' && node.name === param.name) {
-                node.name = newName;
-            }
-        }
-    });
-    param.name = newName;
-}
-exports.renameParam = renameParam;
-var Order;
-(function (Order) {
-    Order["ASC"] = "asc";
-    Order["DESC"] = "desc";
-})(Order = exports.Order || (exports.Order = {}));
 class QueryBuilder {
     constructor(connection, databaseName, tableName) {
         this.connection = connection;
@@ -62,12 +41,25 @@ class QueryBuilder {
         this.tableName = tableName;
         return this;
     }
+    with(params) {
+        if (!this.query.params) {
+            this.query.params = {};
+        }
+        Object.assign(this.query.params, params);
+        return this;
+    }
     where(fn) {
         this.query.where = parseFunctionExpression(fn);
         return this;
     }
-    sort(orderList) {
-        this.query.order = orderList;
+    orderBy(fn, direction = 'asc') {
+        if (!this.query.orders) {
+            this.query.orders = [];
+        }
+        this.query.orders.push({
+            direction,
+            expression: parseFunctionExpression(fn),
+        });
         return this;
     }
     slice(offset) {
@@ -77,6 +69,28 @@ class QueryBuilder {
     take(amount) {
         this.query.limit = amount;
         return this;
+    }
+    join(tableName, type, expr) {
+        if (!this.query.joins) {
+            this.query.joins = [];
+        }
+        // TODO: Make expr optional and build a default expression based on the target
+        //       table's primary key
+        this.query.joins.push({
+            tableName,
+            type,
+            expression: parseFunctionExpression(expr),
+        });
+        return this;
+    }
+    leftJoin(tableName, expr) {
+        return this.join(tableName, 'left', expr);
+    }
+    rightJoin(tableName, expr) {
+        return this.join(tableName, 'left', expr);
+    }
+    innerJoin(tableName, expr) {
+        return this.join(tableName, 'left', expr);
     }
     select(fn) {
         if (!this.tableName) {

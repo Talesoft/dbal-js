@@ -29,6 +29,12 @@ class Connection {
                 .hydrate(databaseData, deep)));
         });
     }
+    save(deep) {
+        return __awaiter(this, void 0, void 0, function* () {
+            console.log('Saving connection');
+            yield Promise.all(Object.values(this.databases).map(d => d.save(deep)));
+        });
+    }
     getDatabase(name) {
         if (!name) {
             if (!this.options.databaseName) {
@@ -64,9 +70,7 @@ class Connector {
                 throw new Error(`Driver ${fullOptions.driver} is not registered`);
             }
             const DriverImplementation = this.drivers[fullOptions.driver];
-            const connection = new Connection(fullOptions, new DriverImplementation(options));
-            yield connection.driver.connect();
-            return connection;
+            return new Connection(fullOptions, new DriverImplementation(options));
         });
     }
     connectUrl(url) {

@@ -1,10 +1,10 @@
 import { parseScript } from 'esprima';
-import { ExpressionStatement, AssignmentExpression, BaseFunction, Node } from 'estree';
+import { AssignmentExpression, BaseFunction, ExpressionStatement } from 'estree';
 import { Identifier } from './common';
 import { Connection } from './connections';
-import { walk } from 'estree-walker';
 
-export type ExpressionFunction<T = {}> = (value: T) => any;
+export type ExpressionFunction<T = {}> = (value: T, ...joins: any[]) => any;
+export type SelectorFunction<T = {}> = (value: T, ...joins: any[]) => any;
 
 const functionParseCache: { [key: string]: BaseFunction } = {};
 export function parseFunctionExpression(fn: (...args: any[]) => void) {
@@ -14,7 +14,7 @@ export function parseFunctionExpression(fn: (...args: any[]) => void) {
     }
     let result;
     try {
-        const expr = parseScript('x = ' + source).body[0] as ExpressionStatement;
+        const expr = parseScript(`x = ${source}`).body[0] as ExpressionStatement;
         result = (expr.expression as AssignmentExpression).right;
     } catch (e) {
         throw new Error('Failed to parse function expression: Can\'t parse native functions');
@@ -25,50 +25,51 @@ export function parseFunctionExpression(fn: (...args: any[]) => void) {
     return functionParseCache[source] = result as BaseFunction;
 }
 
-export function renameParam(ast: BaseFunction, index: number, newName: string) {
-    const param = ast.params[index];
-    if (param.type !== 'Identifier') {
-        throw new Error(
-            `Failed to rename param at index ${index}: Param is not an identifier. Other params are not supported yet.`
-        );
-    }
-    walk(ast as Node, {
-        enter(node) {
-            if (node.type === 'Identifier' && node.name === param.name) {
-                node.name = newName;
-            }
-        }
-    });
-    param.name = newName;
+export type OrderDirection = 'asc' | 'desc';
+export interface Order {
+    direction: OrderDirection;
+    expression: BaseFunction;
 }
 
-export enum Order {
-    ASC = 'asc',
-    DESC = 'desc',
+export type JoinType = 'left' | 'right' | 'inner';
+export interface Join {
+    tableName: Identifier;
+    type: JoinType;
+    expression: BaseFunction;
 }
 
-export type OrderList<T = {}> = { [K in keyof T]: Order };
+export interface QueryParams {
+    [key: string]: string | number | null;
+}
 
-export interface Query<T = {}> {
+export interface Query {
     where?: BaseFunction;
-    order?: OrderList<T>;
+    orders?: Order[];
     limit?: number;
     offset?: number;
+    joins?: Join[];
+    params?: QueryParams;
 }
 
 export interface Queryable<T = {}> {
-    where(fn: ExpressionFunction): this;
-    sort(orderList: OrderList<T>): this;
-    slice(offset: number): this;
-    take(amount: number): this;
-    select<M = T>(fn?: ExpressionFunction<T>): M[];
-    stream<M = T>(fn?: ExpressionFunction<T>): AsyncIterator<M>;
+    with(params: QueryParams): Queryable<T>;
+    where(fn: ExpressionFunction<T>): Queryable<T>;
+    orderBy(fn: ExpressionFunction<T>, direction?: OrderDirection): Queryable<T>;
+    slice(offset: number): Queryable<T>;
+    take(amount: number): Queryable<T>;
+    join(tableName: Identifier, type: JoinType, expr: ExpressionFunction<T>): Queryable<T>;
+    leftJoin(tableName: Identifier, expr: ExpressionFunction<T>): Queryable<T>;
+    rightJoin(tableName: Identifier, expr: ExpressionFunction<T>): Queryable<T>;
+    innerJoin(tableName: Identifier, expr: ExpressionFunction<T>): Queryable<T>;
+    select<M = T>(fn?: SelectorFunction<T>): Promise<M[]>;
+    stream<M = T>(fn?: SelectorFunction<T>): AsyncIterator<M>;
+    [Symbol.asyncIterator](): Promise<AsyncIterator<T>>;
 }
 
-export class QueryBuilder<T = {}> implements Queryable<T>{
+export class QueryBuilder<T = {}> implements Queryable<T> {
     public readonly connection: Connection;
     public readonly databaseName: Identifier;
-    public readonly query: Query<T>;
+    public readonly query: Query;
 
     private tableName: Identifier | undefined;
 
@@ -79,18 +80,32 @@ export class QueryBuilder<T = {}> implements Queryable<T>{
         this.query = {};
     }
 
-    from(tableName: Identifier) {
+    public from(tableName: Identifier) {
         this.tableName = tableName;
         return this;
     }
 
-    public where(fn: ExpressionFunction) {
+    public with(params: QueryParams) {
+        if (!this.query.params) {
+            this.query.params = {};
+        }
+        Object.assign(this.query.params, params);
+        return this;
+    }
+
+    public where(fn: ExpressionFunction<T>) {
         this.query.where = parseFunctionExpression(fn);
         return this;
     }
 
-    public sort(orderList: OrderList<T>) {
-        this.query.order = orderList;
+    public orderBy(fn: ExpressionFunction<T>, direction: OrderDirection = 'asc') {
+        if (!this.query.orders) {
+            this.query.orders = [];
+        }
+        this.query.orders.push({
+            direction,
+            expression: parseFunctionExpression(fn),
+        });
         return this;
     }
 
@@ -104,7 +119,37 @@ export class QueryBuilder<T = {}> implements Queryable<T>{
         return this;
     }
 
-    public select<M = T>(fn?: ExpressionFunction<T>) {
+    public join(
+        tableName: Identifier,
+        type: JoinType,
+        expr: ExpressionFunction<T>,
+    ): this {
+        if (!this.query.joins) {
+            this.query.joins = [];
+        }
+        // TODO: Make expr optional and build a default expression based on the target
+        //       table's primary key
+        this.query.joins.push({
+            tableName,
+            type,
+            expression: parseFunctionExpression(expr),
+        });
+        return this;
+    }
+
+    public leftJoin(tableName: Identifier, expr: ExpressionFunction<T>): this {
+        return this.join(tableName, 'left', expr);
+    }
+
+    public rightJoin(tableName: Identifier, expr: ExpressionFunction<T>): this {
+        return this.join(tableName, 'left', expr);
+    }
+
+    public innerJoin(tableName: Identifier, expr: ExpressionFunction<T>): this {
+        return this.join(tableName, 'left', expr);
+    }
+
+    public select<M = T>(fn?: SelectorFunction<T>) {
         if (!this.tableName) {
             throw new Error('Failed to execute query: No table selected. Use from() to select a table.');
         }
@@ -112,7 +157,7 @@ export class QueryBuilder<T = {}> implements Queryable<T>{
         return this.connection.driver.select<T, M>(this.databaseName, this.tableName, this.query, selector);
     }
 
-    public stream<M = T>(fn?: ExpressionFunction<T>) {
+    public stream<M = T>(fn?: SelectorFunction<T>) {
         if (!this.tableName) {
             throw new Error('Failed to execute query: No table selected. Use from() to select a table.');
         }
@@ -120,7 +165,7 @@ export class QueryBuilder<T = {}> implements Queryable<T>{
         return this.connection.driver.stream<T, M>(this.databaseName, this.tableName, this.query, selector);
     }
 
-    async [Symbol.asyncIterator]() {
+    public async [Symbol.asyncIterator]() {
         return this.stream();
     }
 }

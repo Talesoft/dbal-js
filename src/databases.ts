@@ -27,13 +27,13 @@ export class DatabaseView {
     }
 
     public async load(deep?: boolean) {
+        if (!this.changed) {
+            return;
+        }
         await this.hydrate(await this.connection.driver.getDatabase(this.data.name), deep);
     }
 
     public async hydrate(database: Database, deep?: boolean) {
-        if (!this.changed) {
-            return;
-        }
         this.data = database;
         if (deep) {
             const tables = this.data.tables || await this.connection.driver.getTables(this.data.name);
@@ -43,8 +43,10 @@ export class DatabaseView {
     }
 
     public async save(deep?: boolean) {
-        if (!this.changed) {
-            return;
+        if (this.changed) {
+            if (!this.exists()) {
+                await this.create();
+            }
         }
         if (deep) {
             await Promise.all(Object.values(this.tables).map(t => t.save(deep)));
@@ -60,6 +62,36 @@ export class DatabaseView {
 
     public exists() {
         return this.connection.driver.hasDatabase(this.name);
+    }
+
+    public async create(deep?: boolean) {
+        this.data = {
+            ...this.data,
+            ...(await this.connection.driver.createDatabase(this.data)),
+        };
+        if (deep && this.data.tables) {
+            await Promise.all(this.data.tables.map(t => this.getTable(t.name).update()));
+        }
+        this.changed = false;
+        return this;
+    }
+
+    public async update(deep?: boolean) {
+        this.data = {
+            ...this.data,
+            ...(await this.connection.driver.updateDatabase(this.data)),
+        };
+        if (deep && this.data.tables) {
+            await Promise.all(this.data.tables.map(t => this.getTable(t.name).update()));
+        }
+        this.changed = false;
+        return this;
+    }
+
+    public async remove() {
+        await this.connection.driver.removeDatabase(this.data.name);
+        this.changed = true;
+        return this;
     }
 
     public getData(deep?: boolean) {

@@ -1,10 +1,11 @@
+import { Identifier } from './common';
 import { TableView } from './tables';
-import { TypeInfo } from "./types";
-import { Identifier } from "./common";
-export interface Column<T = {}> {
+import { TypeInfo } from './types';
+export interface Column<T = {}> extends TypeInfo {
     name: Identifier;
-    typeInfo: TypeInfo;
-    defaultValue: T;
+    defaultValue: T | null;
+    generated: boolean;
+    comment: string;
 }
 export declare class ColumnView<T = {}> {
     readonly table: TableView;
@@ -19,7 +20,12 @@ export declare class ColumnView<T = {}> {
     save(): Promise<void>;
     getData(): {
         name: string;
-        typeInfo?: TypeInfo | undefined;
-        defaultValue?: T | undefined;
+        defaultValue?: T | null | undefined;
+        generated?: boolean | undefined;
+        comment?: string | undefined;
+        type?: string | undefined;
+        typeParams?: (string | number)[] | undefined;
+        nullable?: boolean | undefined;
+        unsigned?: boolean | undefined;
     };
 }

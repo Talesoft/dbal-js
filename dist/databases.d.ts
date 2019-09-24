@@ -17,6 +17,9 @@ export declare class DatabaseView {
     save(deep?: boolean): Promise<void>;
     getTable(name: Identifier): TableView<{}>;
     exists(): Promise<boolean>;
+    create(deep?: boolean): Promise<this>;
+    update(deep?: boolean): Promise<this>;
+    remove(): Promise<this>;
     getData(deep?: boolean): {
         name: string;
     } | {

@@ -3,14 +3,9 @@ export type Type = string;
 
 export interface TypeInfo {
     type: Type;
-    args: Array<string | number>;
+    typeParams: Array<string | number>;
     nullable: boolean;
     unsigned: boolean;
-}
-
-export interface TypeConverter<L, R = string> {
-    toLocalValue(value: L, typeInfo: TypeInfo): R,
-    toRemoteValue(value: R, typeInfo: TypeInfo): L
 }
 
 export interface TypeInstruction {
@@ -20,10 +15,13 @@ export interface TypeInstruction {
 
 export function parseTypeArgumentString(value: string) {
     let str = value;
-    const pattern = /^"[^"]+"|[\d.]+(?:\s*,\s*|$)/;
-    let matches;
+    const pattern = /^"([^"]+"|[\d.]+)(?:\s*,\s*|$)/;
     const args: Array<string | number> = [];
-    while (str.length > 0 && (matches = str.match(pattern))) {
+    while (str.length > 0) {
+        const matches = str.match(pattern);
+        if (!matches) {
+            break;
+        }
         const [match, argValue] = matches;
         let finalArgValue: string | number = argValue;
         if (!argValue.startsWith('"')) {
@@ -37,14 +35,17 @@ export function parseTypeArgumentString(value: string) {
     return args;
 }
 
-export function parseTypeInstructionString(value: string): Array<TypeInstruction> {
+export function parseTypeInstructionString(value: string): TypeInstruction[] {
     let str = value;
     const pattern = /^([\w\d_]+)(?:\(([^)]+)\))?(?: |$)/;
-    let matches;
     const instructions = [];
-    while (str.length > 0 && (matches = str.match(pattern))) {
+    while (str.length > 0) {
+        const matches = str.match(pattern);
+        if (!matches) {
+            break;
+        }
         const [match, keyword, args] = matches;
-        instructions.push({ keyword: keyword.toUpperCase(), args: parseTypeArgumentString(args)});
+        instructions.push({ keyword: keyword.toUpperCase(), args: args ? parseTypeArgumentString(args) : [] });
         str = str.substr(match.length);
     }
     return instructions;
@@ -64,7 +65,7 @@ export function parseTypeInfoString(value: string): TypeInfo {
     return {
         nullable,
         type: instructions[0].keyword,
-        args: instructions[0].args,
+        typeParams: instructions[0].args,
         unsigned: !!instructions.find(i => i.keyword === 'UNSIGNED'),
     };
 }

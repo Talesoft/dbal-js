@@ -24,14 +24,14 @@ class DatabaseView {
     }
     load(deep) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!this.changed) {
+                return;
+            }
             yield this.hydrate(yield this.connection.driver.getDatabase(this.data.name), deep);
         });
     }
     hydrate(database, deep) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.changed) {
-                return;
-            }
             this.data = database;
             if (deep) {
                 const tables = this.data.tables || (yield this.connection.driver.getTables(this.data.name));
@@ -42,8 +42,10 @@ class DatabaseView {
     }
     save(deep) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this.changed) {
-                return;
+            if (this.changed) {
+                if (!this.exists()) {
+                    yield this.create();
+                }
             }
             if (deep) {
                 yield Promise.all(Object.values(this.tables).map(t => t.save(deep)));
@@ -58,6 +60,33 @@ class DatabaseView {
     }
     exists() {
         return this.connection.driver.hasDatabase(this.name);
+    }
+    create(deep) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.data = Object.assign(Object.assign({}, this.data), (yield this.connection.driver.createDatabase(this.data)));
+            if (deep && this.data.tables) {
+                yield Promise.all(this.data.tables.map(t => this.getTable(t.name).update()));
+            }
+            this.changed = false;
+            return this;
+        });
+    }
+    update(deep) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.data = Object.assign(Object.assign({}, this.data), (yield this.connection.driver.updateDatabase(this.data)));
+            if (deep && this.data.tables) {
+                yield Promise.all(this.data.tables.map(t => this.getTable(t.name).update()));
+            }
+            this.changed = false;
+            return this;
+        });
+    }
+    remove() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connection.driver.removeDatabase(this.data.name);
+            this.changed = true;
+            return this;
+        });
     }
     getData(deep) {
         const tables = Object.values(this.tables);

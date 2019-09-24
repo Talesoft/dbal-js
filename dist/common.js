@@ -4,8 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const url_parse_1 = __importDefault(require("url-parse"));
+function identity(v) {
+    return v;
+}
+exports.identity = identity;
+function toString(v) {
+    return `${v}`;
+}
+exports.toString = toString;
 function parseConnectionUrl(url) {
-    const { protocol, hostname, port, pathname, query, username, password } = new url_parse_1.default(url);
+    const { protocol, hostname, port, pathname, query, username, password } = url_parse_1.default(url);
     let finalDriver = protocol;
     if (finalDriver && finalDriver.endsWith(':')) {
         finalDriver = finalDriver.substr(0, finalDriver.length - 1);

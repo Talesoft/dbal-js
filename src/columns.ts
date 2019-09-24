@@ -1,11 +1,12 @@
+import { Identifier } from './common';
 import { TableView } from './tables';
-import { TypeInfo } from "./types";
-import { Identifier } from "./common";
+import { TypeInfo } from './types';
 
-export interface Column<T = {}> {
+export interface Column<T = {}> extends TypeInfo {
     name: Identifier;
-    typeInfo: TypeInfo;
-    defaultValue: T;
+    defaultValue: T | null;
+    generated: boolean;
+    comment: string;
 }
 
 export class ColumnView<T = {}> {

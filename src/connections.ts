@@ -20,8 +20,13 @@ export class Connection {
 
     public async hydrate(databases: Database[], deep?: boolean) {
         await Promise.all(databases.map(databaseData => this.getDatabase(databaseData.name)
-            .hydrate(databaseData, deep)
+            .hydrate(databaseData, deep),
         ));
+    }
+
+    public async save(deep?: boolean) {
+        console.log('Saving connection');
+        await Promise.all(Object.values(this.databases).map(d => d.save(deep)));
     }
 
     public getDatabase(name?: Identifier): DatabaseView {
@@ -41,7 +46,7 @@ export class Connection {
         return this.driver.disconnect();
     }
 
-    getData(deep?: boolean) {
+    public getData(deep?: boolean) {
         return Object.values(this.databases).map(d => d.getData(deep));
     }
 }
@@ -58,8 +63,8 @@ export class Connector {
         this.defaultOptions = defaultOptions;
     }
 
-    async connect(options: ConnectionOptions) {
-        const fullOptions = { ...this.defaultOptions,...options };
+    public async connect(options: ConnectionOptions) {
+        const fullOptions = { ...this.defaultOptions, ...options };
         if (!fullOptions.driver) {
             throw new Error('No driver selected');
         }
@@ -67,20 +72,18 @@ export class Connector {
             throw new Error(`Driver ${fullOptions.driver} is not registered`);
         }
         const DriverImplementation = this.drivers[fullOptions.driver];
-        const connection = new Connection(fullOptions, new DriverImplementation(options));
-        await connection.driver.connect();
-        return connection;
+        return new Connection(fullOptions, new DriverImplementation(options));
     }
 
-    connectUrl(url: ConnectionUrl) {
+    public connectUrl(url: ConnectionUrl) {
         return this.connect(parseConnectionUrl(url));
     }
 
-    static connect(options: ConnectionOptions, drivers?: DriverList) {
+    public static connect(options: ConnectionOptions, drivers?: DriverList) {
         return new Connector(drivers).connect(options);
     }
 
-    static connectUrl(url: ConnectionUrl, drivers?: DriverList) {
+    public static connectUrl(url: ConnectionUrl, drivers?: DriverList) {
         return Connector.connect(parseConnectionUrl(url), drivers);
     }
 }
